@@ -10,7 +10,7 @@ from typing import List
 
 from pydantic import BaseModel
 # Config
-opentrons = os
+opentrons = oe
 
 app = FastAPI()
 
@@ -153,9 +153,11 @@ def build_func(ot, directions, simulate=False):
             p20s.aspirate(transfer.water, plate_dict[2].wells_by_name()["A1"])
             p20s.aspirate(transfer.volume, plate_dict[transfer.fromPosition].wells_by_name()[transfer.fromAddress])
             p20s.dispense(transfer.volume + transfer.water, plate_dict[1].wells_by_name()[transfer.toAddress])
+            p20s.blow_out()
         else:
             p20s.aspirate(transfer.volume, plate_dict[transfer.fromPosition].wells_by_name()[transfer.fromAddress])
             p20s.dispense(transfer.volume, plate_dict[1].wells_by_name()[transfer.toAddress])
+            p20s.blow_out()
         p20s.mix(1, 4)
         p20s.drop_tip()
 
