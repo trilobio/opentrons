@@ -9,8 +9,12 @@ import opentrons.simulate as os
 from typing import List
 
 from pydantic import BaseModel
+
 # Config
-opentrons = oe
+opentrons = os
+left = "p20_single_gen2"
+right = "p300_single_gen2"
+
 
 app = FastAPI()
 
@@ -167,10 +171,6 @@ def build_func(ot, directions, simulate=False):
 
 @app.post("/api/build/newbuild/")
 def build(directions: AssemblyDirections):
-    # Acquire lock
-    lock = get_lock("Test homing")
-    if lock == False:
-        return {"Message": "App currently locked"}
 
     # Simulate protocol
     try:
@@ -178,9 +178,135 @@ def build(directions: AssemblyDirections):
     except Exception as e:
         print(e)
         return {"Message": str(e)}
+    
+    # Acquire lock
+    lock = get_lock("Test homing")
+    if lock == False:
+        return {"Message": "App currently locked"}
 
     # Execute protocol
     threading.Thread(target=build_func, args=(opentrons,directions)).start()
     return {"Message": "Lock acquired until build completes"}
 
+#######
+def transform_prep_func(ot, quantity, simulate=False):
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    ctx = ot.get_protocol_api('2.9')
+    comp_plate = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
+    comp = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", "2").wells_by_name()["A1"]
+    p300s = ctx.load_instrument("p300_single_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul", "3")])
+    p300s.distribute(15, comp, comp_plate.wells()[:quantity])
+
+    if simulate == False:
+        unlock()
+
+@app.get("/api/build/transform_prep/{quantity}")
+def transform_prep(quantity: int):
+    # Simulate protocol
+    try:
+        transform_prep_func(os, quantity, simulate=True)
+    except Exception as e:
+        print(e)
+        return {"Message": str(e)}
+
+    # Acquire lock
+    lock = get_lock("Test homing")
+    if lock == False:
+        return {"Message": "App currently locked"}
+
+    threading.Thread(target=transform_prep_func, args=(opentrons,quantity)).start()
+    return {"Message": "Lock acquired until build completes"}
+
+#######
+def transform_func(ot, quantity, simulate=False):
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    ctx = ot.get_protocol_api('2.9')
+    comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
+    build = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "2")
+    p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul", "3")])
+
+    lanes = math.ceil(quantity/8)
+    for i in range(0, lanes):
+        p20m.transfer(1, build.rows()[0][i], comp_cells.rows()[0][i], new_tip='always')
+
+    if simulate == False:
+        unlock()
+    
+@app.get("/api/build/transform/{quantity}")
+def transform(quantity: int):
+    # Simulate protocol
+    try:
+        transform_func(os, quantity, simulate=True)
+    except Exception as e:
+        print(e)
+        return {"Message": str(e)}
+
+    # Acquire lock
+    lock = get_lock("Test homing")
+    if lock == False:
+        return {"Message": "App currently locked"}
+
+    threading.Thread(target=transform_func, args=(opentrons,quantity)).start()
+    return {"Message": "Lock acquired until build completes"}
+
+#######
+def plate_func(ot, quantity, simulate=False):
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    ctx = ot.get_protocol_api('2.9')
+    comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
+    lb = ctx.load_labware("nest_1_reservoir_195ml", "2").wells_by_name()["A1"]
+    
+    plate_num = int(quantity/24)
+    leftover_lanes = quantity%24
+    if leftover_lanes > 0:
+        plate_num+=1
+
+    agar_plates = [ctx.load_labware("biorad_96_wellplate_200ul_pcr", str(x)) for x in range(3,3+plate_num)]
+    tip_racks = [ctx.load_labware("opentrons_96_filtertiprack_20ul", str(x)) for x in range(7,7+plate_num)]
+    p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=tip_racks)
+
+    lanes = math.ceil(quantity/8)
+
+    current_plate = 0
+    current_lane = 0
+    for lane in range(0,lanes):
+        for i in range(0, 4):
+            # New lane
+            p20m.pick_up_tip()
+            if i != 0:
+                p20m.transfer(7.5, lb, comp_cells.rows()[0][lane], mix_after=(2,5), new_tip='never')
+            p20m.aspirate(7.5, comp_cells.rows()[0][lane])
+
+            # Plate
+            p20m.move_to(agar_plates[current_plate].rows()[0][current_lane].top(4))
+            p20m.dispense(6.5)
+            p20m.move_to(agar_plates[current_plate].rows()[0][current_lane].bottom())
+            p20m.move_to(agar_plates[current_plate].rows()[0][current_lane].top())
+            p20m.drop_tip()
+
+            # Iterate lanes
+            current_lane += 1
+            if current_lane == 12:
+                current_plate+=1
+                current_lane=0
+
+    if simulate == False:
+        unlock()
+
+@app.get("/api/build/plate/{quantity}")
+def plate(quantity: int):
+    # Simulate protocol
+    try:
+        plate_func(os, quantity, simulate=True)
+    except Exception as e:
+        print(e)
+        return {"Message": str(e)}
+
+    # Acquire lock
+    lock = get_lock("Test homing")
+    if lock == False:
+        return {"Message": "App currently locked"}
+
+    threading.Thread(target=plate_func, args=(opentrons,quantity)).start()
+    return {"Message": "Lock acquired until build completes"}
 
