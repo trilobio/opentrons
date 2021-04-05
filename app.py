@@ -1,99 +1,41 @@
 from fastapi import FastAPI
-import math
+from pydantic import BaseModel
+from typing import List
 import asyncio
-import sqlite3
-import time
-import threading
 import opentrons.execute as oe
 import opentrons.simulate as os
-from typing import List
+import opentronsfastapi
 
-from pydantic import BaseModel
-
-# Config
-opentrons = os
-left = "p20_single_gen2"
-right = "p300_single_gen2"
-
+# Set our opentrons_env to opentrons.simulate
+# On real robots, this would be set to opentrons.execute
+opentronsfastapi.opentrons_env = os
 
 app = FastAPI()
 
-# Setup sqlite3 lock
-conn = sqlite3.connect("lock.db")
-c = conn.cursor()
-table_sql = """
-BEGIN;
-CREATE TABLE IF NOT EXISTS lock (
-    lock_id INT PRIMARY KEY,
-    lock_active BOOL NOT NULL DEFAULT false,
-    locked_by TEXT NOT NULL DEFAULT ''
-);
-INSERT INTO lock(lock_id) VALUES (1) ON CONFLICT DO NOTHING;
-UPDATE lock SET lock_active = false, locked_by='' WHERE lock_id=1;
-COMMIT;
-"""
-c.executescript(table_sql)
-conn.close()
+class DispenseWell(BaseModel):
+    address: str
 
-# Robotic locks
-def get_lock(locked_by):
-    conn = sqlite3.connect("lock.db")
-    c_lock = conn.cursor()
-    c_lock.execute("SELECT lock_active, locked_by FROM lock WHERE lock_id=1")
-    lock_state = c_lock.fetchone()
+@app.post("/api/demo")
+@opentronsfastapi.opentrons_execute()
+def demo_procedure(dispenseWell:DispenseWell):
 
-    if lock_state[0] == False:
-        # Acquire the lock
-        c_lock.execute("UPDATE lock SET lock_active = true, locked_by=? WHERE lock_id=1", (locked_by,))
-        conn.commit()
-        conn.close()
-        return True
-    conn.close()
-    return False # Fail to acquire the lock
-
-def unlock():
-    conn = sqlite3.connect("lock.db")
-    c_lock = conn.cursor()
-    c_lock.execute("UPDATE lock SET lock_active = false, locked_by='' WHERE lock_id=1")
-    conn.commit()
-    conn.close()
-
-### Test funcs ####
-
-@app.get("/")
-def read_root():
-    return {"Message": "Hello World"}
-
-@app.get("/test/unlock")
-def test_unlock():
-    unlock()
-
-def test_lock_func():
-    time.sleep(10)
-    unlock()
-    return {"Message": "Unlocked"}
-
-@app.get("/test/lock")
-def test_lock():
-    lock = get_lock("Test Lock")
-    if lock == False:
-        return {"Message": "App currently locked"}
-    threading.Thread(target=test_lock_func).start()
-    return {"Message": "Lock acquired for 10 seconds"}
-
-def test_home_func():
+    # Asyncio must be set to allow the robot to run protocols in
+    # the background while still responding to API requests
     asyncio.set_event_loop(asyncio.new_event_loop())
-    ctx = opentrons.get_protocol_api('2.9')
-    ctx.home()
-    unlock()
+    ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
 
-@app.get("/test/home")
-def test_home():
-    lock = get_lock("Test homing")
-    if lock == False:
-        return {"Message": "App currently locked"}
-    threading.Thread(target=test_home_func).start()
-    return {"Message": "Lock acquired until home completes"}
+    ctx.home()
+    plate = ctx.load_labware("corning_96_wellplate_360ul_flat", 1)
+    tip_rack = ctx.load_labware("opentrons_96_filtertiprack_20ul", 2)
+    p20 = ctx.load_instrument("p20_single_gen2", "left", tip_racks=[tip_rack])
+
+    p20.pick_up_tip()
+
+    p20.aspirate(10, plate.wells_by_name()['A1'])
+    p20.dispense(10, plate.wells_by_name()[dispenseWell.address])
+
+    p20.drop_tip()
+
 
 ##################### Build time #######################
 
@@ -121,10 +63,11 @@ class AssemblyDirections(BaseModel):
     assemblyTransfers: List[AssemblyTransfer]
     maxVol: float
 
-
-def build_func(ot, directions, simulate=False):
+@app.post("/api/build")
+@opentronsfastapi.opentrons_execute()
+def build_func(directions: AssemblyDirections):
     asyncio.set_event_loop(asyncio.new_event_loop())
-    ctx = ot.get_protocol_api('2.9')
+    ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
 
     # Setup labwares
     plate_dict = {}
@@ -165,62 +108,21 @@ def build_func(ot, directions, simulate=False):
         p20s.mix(1, 4)
         p20s.drop_tip()
 
-    # Complete and unlock
-    if simulate == False:
-        unlock()
-
-@app.post("/api/build/newbuild/")
-def build(directions: AssemblyDirections):
-
-    # Simulate protocol
-    try:
-        build_func(os, directions, simulate=True)
-    except Exception as e:
-        print(e)
-        return {"Message": str(e)}
-    
-    # Acquire lock
-    lock = get_lock("Test homing")
-    if lock == False:
-        return {"Message": "App currently locked"}
-
-    # Execute protocol
-    threading.Thread(target=build_func, args=(opentrons,directions)).start()
-    return {"Message": "Lock acquired until build completes"}
-
-#######
-def transform_prep_func(ot, quantity, simulate=False):
+@app.post("/api/transformation_prep/{quantity}")
+@opentronsfastapi.opentrons_execute()
+def transform_prep(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
-    ctx = ot.get_protocol_api('2.9')
+    ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
     comp_plate = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     comp = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", "2").wells_by_name()["A1"]
     p300s = ctx.load_instrument("p300_single_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul", "3")])
     p300s.distribute(15, comp, comp_plate.wells()[:quantity])
 
-    if simulate == False:
-        unlock()
-
-@app.get("/api/build/transform_prep/{quantity}")
-def transform_prep(quantity: int):
-    # Simulate protocol
-    try:
-        transform_prep_func(os, quantity, simulate=True)
-    except Exception as e:
-        print(e)
-        return {"Message": str(e)}
-
-    # Acquire lock
-    lock = get_lock("Test homing")
-    if lock == False:
-        return {"Message": "App currently locked"}
-
-    threading.Thread(target=transform_prep_func, args=(opentrons,quantity)).start()
-    return {"Message": "Lock acquired until build completes"}
-
-#######
-def transform_func(ot, quantity, simulate=False):
+@app.post("/api/transformation/{quantity}")
+@opentronsfastapi.opentrons_execute()
+def transform(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
-    ctx = ot.get_protocol_api('2.9')
+    ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
     comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     build = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "2")
     p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul", "3")])
@@ -229,30 +131,11 @@ def transform_func(ot, quantity, simulate=False):
     for i in range(0, lanes):
         p20m.transfer(1, build.rows()[0][i], comp_cells.rows()[0][i], new_tip='always')
 
-    if simulate == False:
-        unlock()
-    
-@app.get("/api/build/transform/{quantity}")
-def transform(quantity: int):
-    # Simulate protocol
-    try:
-        transform_func(os, quantity, simulate=True)
-    except Exception as e:
-        print(e)
-        return {"Message": str(e)}
-
-    # Acquire lock
-    lock = get_lock("Test homing")
-    if lock == False:
-        return {"Message": "App currently locked"}
-
-    threading.Thread(target=transform_func, args=(opentrons,quantity)).start()
-    return {"Message": "Lock acquired until build completes"}
-
-#######
-def plate_func(ot, quantity, simulate=False):
+@app.post("/api/plate/{quantity}")
+@opentronsfastapi.opentrons_execute()
+def plate(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
-    ctx = ot.get_protocol_api('2.9')
+    ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
     comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     lb = ctx.load_labware("nest_1_reservoir_195ml", "2").wells_by_name()["A1"]
     
@@ -289,24 +172,3 @@ def plate_func(ot, quantity, simulate=False):
             if current_lane == 12:
                 current_plate+=1
                 current_lane=0
-
-    if simulate == False:
-        unlock()
-
-@app.get("/api/build/plate/{quantity}")
-def plate(quantity: int):
-    # Simulate protocol
-    try:
-        plate_func(os, quantity, simulate=True)
-    except Exception as e:
-        print(e)
-        return {"Message": str(e)}
-
-    # Acquire lock
-    lock = get_lock("Test homing")
-    if lock == False:
-        return {"Message": "App currently locked"}
-
-    threading.Thread(target=plate_func, args=(opentrons,quantity)).start()
-    return {"Message": "Lock acquired until build completes"}
-
