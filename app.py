@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import math
 from pydantic import BaseModel
 from typing import List
 import asyncio
@@ -8,7 +9,7 @@ import opentronsfastapi
 
 # Set our opentrons_env to opentrons.simulate
 # On real robots, this would be set to opentrons.execute
-opentronsfastapi.opentrons_env = os
+opentronsfastapi.opentrons_env = oe
 
 app = FastAPI()
 
@@ -113,10 +114,12 @@ def build_func(directions: AssemblyDirections):
 def transform_prep(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
     ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
+    ctx.home()
     comp_plate = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     comp = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", "2").wells_by_name()["A1"]
     p300s = ctx.load_instrument("p300_single_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul", "3")])
     p300s.distribute(15, comp, comp_plate.wells()[:quantity])
+    ctx.home()
 
 @app.post("/api/transformation/{quantity}")
 @opentronsfastapi.opentrons_execute()
@@ -126,16 +129,22 @@ def transform(quantity: int):
     comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     build = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "2")
     p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul", "3")])
+    water = ctx.load_labware("nest_1_reservoir_195ml", "5").wells_by_name()["A1"]
 
     lanes = math.ceil(quantity/8)
     for i in range(0, lanes):
-        p20m.transfer(1, build.rows()[0][i], comp_cells.rows()[0][i], new_tip='always')
+        p20m.pick_up_tip()
+        p20m.transfer(6, water, build.rows()[0][i], mix_after=(3,3), new_tip='never')
+        p20m.transfer(1, build.rows()[0][i], comp_cells.rows()[0][i], new_tip='never')
+        p20m.drop_tip()
+    ctx.home()
 
 @app.post("/api/plate/{quantity}")
 @opentronsfastapi.opentrons_execute()
 def plate(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
     ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
+    ctx.home()
     comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     lb = ctx.load_labware("nest_1_reservoir_195ml", "2").wells_by_name()["A1"]
     
@@ -172,3 +181,4 @@ def plate(quantity: int):
             if current_lane == 12:
                 current_plate+=1
                 current_lane=0
+    ctx.home()
