@@ -118,7 +118,7 @@ def transform_prep(quantity: int):
     comp_plate = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     comp = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", "2").wells_by_name()["A1"]
     p300s = ctx.load_instrument("p300_single_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul", "3")])
-    p300s.distribute(15, comp, comp_plate.wells()[:quantity])
+    p300s.distribute(15, comp, comp_plate.wells()[:quantity], disposal_volume=10)
     ctx.home()
 
 @app.post("/api/transformation/{quantity}")
