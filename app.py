@@ -126,6 +126,7 @@ def transform_prep(quantity: int):
 def transform(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
     ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
+    ctx.home()
     comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     build = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "2")
     p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul", "3")])
