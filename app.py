@@ -13,101 +13,116 @@ opentronsfastapi.opentrons_env = oe
 
 app = FastAPI()
 
-class DispenseWell(BaseModel):
-    address: str
-
-@app.post("/api/demo")
+@app.post("/api/test_competent_cells")
 @opentronsfastapi.opentrons_execute()
-def demo_procedure(dispenseWell:DispenseWell):
-
-    # Asyncio must be set to allow the robot to run protocols in
-    # the background while still responding to API requests
+def transform_test():
     asyncio.set_event_loop(asyncio.new_event_loop())
     ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
-
     ctx.home()
-    plate = ctx.load_labware("corning_96_wellplate_360ul_flat", 1)
-    tip_rack = ctx.load_labware("opentrons_96_filtertiprack_20ul", 2)
-    p20 = ctx.load_instrument("p20_single_gen2", "left", tip_racks=[tip_rack])
-
-    p20.pick_up_tip()
-
-    p20.aspirate(10, plate.wells_by_name()['A1'])
-    p20.dispense(10, plate.wells_by_name()[dispenseWell.address])
-
-    p20.drop_tip()
-
-
-##################### Build time #######################
-
-class AssemblyWell(BaseModel):
-    name: str
-    address: str
-    uuid: str
-
-class AssemblyPlate(BaseModel):
-    tuberack: bool
-    position: int
-    wells: List[AssemblyWell]
-    name: str
-    uuid: str
-
-class AssemblyTransfer(BaseModel):
-    toAddress: str
-    fromPosition: int
-    fromAddress: str
-    volume: float
-    water: float
-
-class AssemblyDirections(BaseModel):
-    assemblyPlates: List[AssemblyPlate]
-    assemblyTransfers: List[AssemblyTransfer]
-    maxVol: float
-
-@app.post("/api/build")
-@opentronsfastapi.opentrons_execute()
-def build_func(directions: AssemblyDirections):
-    asyncio.set_event_loop(asyncio.new_event_loop())
-    ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
 
     # Setup labwares
-    plate_dict = {}
-    build = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
-    plate_dict[1] = build
-    positions = []
-    for plate in directions.assemblyPlates:
-        positions.append(plate.position)
-        if plate.tuberack == True:
-            plate_dict[plate.position] = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", str(plate.position))
-        if plate.tuberack == False:
-            plate_dict[plate.position] = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", str(plate.position))
-    maxPos = max(positions)
+    lb = ctx.load_labware("nest_1_reservoir_195ml", 1).wells_by_name()["A1"]
+    agar_plate = ctx.load_labware("biorad_96_wellplate_200ul_pcr", 2)
+    temperature_module = ctx.load_module("temperature module", 4)
+    competent_cell_plate = temperature_module.load_labware("nest_96_wellplate_100ul_pcr_full_skirt")
 
-    # Setup tips
-    boxes_required = math.ceil(len(directions.assemblyTransfers)/96)
-    tip_racks = []
-    for _ in range(0, boxes_required):
-        maxPos+=1
-        tip_racks.append(ctx.load_labware("opentrons_96_filtertiprack_20ul", str(maxPos)))
+    tube_rack = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", 5)
+    competent_cells_300ul = tube_rack.wells_by_name()["A1"]
+    water = tube_rack.wells_by_name()["B1"]
+    pUC19 = tube_rack.wells_by_name()["C1"]
 
-    # Setup pipette
-    p20s = ctx.load_instrument("p20_single_gen2", "left", tip_racks=tip_racks)
+    tip_rack_single = ctx.load_labware("opentrons_96_filtertiprack_20ul", "6")
+    tip_rack = ctx.load_labware("opentrons_96_filtertiprack_20ul", "9")
 
-    # Run transfers
-    ctx.home()
-    for transfer in directions.assemblyTransfers:
-        p20s.pick_up_tip()
-        if transfer.water > 0.25:
-            p20s.aspirate(transfer.water, plate_dict[2].wells_by_name()["A1"])
-            p20s.aspirate(transfer.volume, plate_dict[transfer.fromPosition].wells_by_name()[transfer.fromAddress])
-            p20s.dispense(transfer.volume + transfer.water, plate_dict[1].wells_by_name()[transfer.toAddress])
-            p20s.blow_out()
-        else:
-            p20s.aspirate(transfer.volume, plate_dict[transfer.fromPosition].wells_by_name()[transfer.fromAddress])
-            p20s.dispense(transfer.volume, plate_dict[1].wells_by_name()[transfer.toAddress])
-            p20s.blow_out()
-        p20s.mix(1, 4)
-        p20s.drop_tip()
+    p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[tip_rack])
+
+    # setup tip wells for single tip use
+    tip_wells = ["{}{}".format(a,b) for b in [1,2,3,4,5,6,7,8,9,10,11,12] for a in ["A","B","C","D","E","F","G","H"]][::-1]
+
+    # Lower temperature of temperature module
+    temperature_module.set_temperature(8) # I set to 8 rather than 4 because it takes way longer to get down to 4
+
+    # Transfer competent cells to temperature module
+    tips_used = 0
+    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
+    tips_used+=1
+    p20m.aspirate(5, competent_cells_300ul)
+    for i in range(24):
+        p20m.aspirate(10, competent_cells_300ul)
+        p20m.dispense(10, competent_cell_plate.wells()[i])
+    p20m.drop_tip()
+
+    # Prepare DNA. NEB ships pUC19 with 1ug per ul. We're going for 256pg on the low end, doubling 8 times until 32768pg
+    # We are assuming here we go from a stock solution of pUC19 of 100ng, or 100,000pg
+    pUC19_stock = 100000
+    dilution = pUC19_stock/32768
+    initial_stock_to_add = 20/dilution # 20ul as the end quantity of how much we want per tube
+    initial_water_to_add = 20 - initial_stock_to_add
+
+    # Fill the first tube with initial_water_to_add and the rest of the tubes with 10ul
+    # We are filling the last column of the competent cell plate
+    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
+    tips_used+=1
+    p20m.aspirate(3, water)
+    p20m.aspirate(initial_water_to_add, water)
+    p20m.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
+    for i in range(1,8):
+        p20m.aspirate(10, water)
+        p20m.dispense(10, competent_cell_plate.wells()[88+i])
+    p20m.drop_tip()
+
+    # Move pUC19 to initial tube, mix, drop tip
+    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
+    tips_used+=1
+    p20m.aspirate(initial_stock_to_add, pUC19)
+    p20m.dispense(initial_stock_to_add, competent_cell_plate.wells()[88])
+    p20m.mix(3, 10, competent_cell_plate.wells()[88])
+    p20m.drop_tip()
+
+    # Dilute 1/2
+    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
+    tips_used+=1
+    for i in range(1,8):
+        p20m.aspirate(10, competent_cell_plate.wells()[88+i-1])
+        p20m.dispense(10, competent_cell_plate.wells()[88+i])
+        p20m.mix(3, 10, competent_cell_plate.wells()[88+i])
+    p20m.drop_tip()
+
+    # Add to competent cells
+    for i in range(0,3):
+        p20m.pick_up_tip(tip_rack_single.wells()[i*8])
+        p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(3,3), new_tip='never')
+        p20m.drop_tip()
+
+    # Wait 15 minutes (in NEB they ask for 30 minutes, but that is pretty long)
+    ctx.delay(900)
+
+    print("asdf")
+    # heat shock
+    temperature_module.set_temperature(42)
+    ctx.delay(10) # The ramp up and down will probably take a bit, so we're doing a short time here. Can be optimized later
+    temperature_module.set_temperature(8)
+
+    # Wait 5 minutes
+    ctx.delay(300)
+
+    # Start plating
+    for i in range(0,3):
+        for j in range(0,4):
+            p20m.pick_up_tip()
+            if i != 0:
+                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(2,5), new_tip='never')
+            p20m.aspirate(7.5, competent_cell_plate.rows()[0][i])
+
+            # Plate
+            current_lane = (i*4)+j
+            p20m.move_to(agar_plate.rows()[0][current_lane].top(4))
+            p20m.dispense(6.5)
+            p20m.move_to(agar_plate.rows()[0][current_lane].bottom())
+            p20m.move_to(agar_plate.rows()[0][current_lane].top())
+            p20m.drop_tip()
+
+
 
 @app.post("/api/transformation_prep/{quantity}")
 @opentronsfastapi.opentrons_execute()
@@ -117,8 +132,8 @@ def transform_prep(quantity: int):
     ctx.home()
     comp_plate = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     comp = ctx.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", "2").wells_by_name()["A1"]
-    p300s = ctx.load_instrument("p300_single_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul", "3")])
-    p300s.distribute(15, comp, comp_plate.wells()[:quantity], disposal_volume=10)
+    p20s = ctx.load_instrument("p20_single_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul", "3")])
+    p20s.distribute(9, comp, comp_plate.wells()[:quantity], disposal_volume=2)
     ctx.home()
 
 @app.post("/api/transformation/{quantity}")
@@ -126,15 +141,16 @@ def transform_prep(quantity: int):
 def transform(quantity: int):
     asyncio.set_event_loop(asyncio.new_event_loop())
     ctx = opentronsfastapi.opentrons_env.get_protocol_api('2.9')
+    ctx.home()
     comp_cells = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "1")
     build = ctx.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", "2")
     p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul", "3")])
-    water = ctx.load_labware("nest_1_reservoir_195ml", "5").wells_by_name()["A1"]
+    #water = ctx.load_labware("nest_1_reservoir_195ml", "5").wells_by_name()["A1"]
 
     lanes = math.ceil(quantity/8)
     for i in range(0, lanes):
         p20m.pick_up_tip()
-        p20m.transfer(6, water, build.rows()[0][i], mix_after=(3,3), new_tip='never')
+        #p20m.transfer(6, water, build.rows()[0][i], mix_after=(3,3), new_tip='never')
         p20m.transfer(1, build.rows()[0][i], comp_cells.rows()[0][i], new_tip='never')
         p20m.drop_tip()
     ctx.home()
