@@ -13,7 +13,7 @@ def run(ctx):
     p20s = ctx.load_instrument("p20_single_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul","10")])
     p300s = ctx.load_instrument("p300_single_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul","11")])
 
-    for pipette in [p20s, p300s]:
+    for pipette in [p20s]:#, p300s]:
         pipette.pick_up_tip()
         for labware in [pcr96, standard_plate, agar_plate, deep_well, reservoir12, reservoir, tubes, standard384]:
             pipette.transfer(20, labware.wells_by_name()["A1"].bottom(), labware.wells_by_name()["A1"].bottom(), new_tip='never')
