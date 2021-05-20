@@ -122,6 +122,9 @@ def transform_test():
             p20m.move_to(agar_plate.rows()[0][current_lane].top())
             p20m.drop_tip()
 
+    # Deactivate temperature module
+    temperature_module.deactivate()
+
 
 
 @app.post("/api/transformation_prep/{quantity}")
