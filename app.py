@@ -117,6 +117,9 @@ def transform_test():
             p20m.drop_tip()
     ctx.home()
 
+    # Deactivate temperature module
+    temperature_module.deactivate()
+
 
 
 @app.post("/api/transformation_prep/{quantity}")
