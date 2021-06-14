@@ -15,4 +15,4 @@ def make_gg_rxns(num_rxns,rxn_vol, extra=1.2):
     )
     return master_mix
 
-print(make_gg_rxns(48, 8, extra=1.1))
+print(make_gg_rxns(96, 8, extra=1.1))
