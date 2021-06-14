@@ -34,23 +34,20 @@ def transform_test():
     tip_rack_single = ctx.load_labware("opentrons_96_filtertiprack_20ul", "6")
     tip_rack = ctx.load_labware("opentrons_96_filtertiprack_20ul", "9")
 
-    p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[tip_rack])
-
-    # setup tip wells for single tip use
-    tip_wells = ["{}{}".format(a,b) for b in [1,2,3,4,5,6,7,8,9,10,11,12] for a in ["A","B","C","D","E","F","G","H"]][::-1]
+    p20s = ctx.load_instrument("p20_single_gen2", "left", tip_racks=[tip_rack_single])
+    p20m = ctx.load_instrument("p20_multi_gen2", "right", tip_racks=[tip_rack])
 
     # Lower temperature of temperature module
     temperature_module.set_temperature(8) # I set to 8 rather than 4 because it takes way longer to get down to 4
 
     # Transfer competent cells to temperature module
     tips_used = 0
-    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
-    tips_used+=1
-    p20m.aspirate(5, competent_cells_300ul)
+    p20s.pick_up_tip()
+    p20s.aspirate(5, competent_cells_300ul)
     for i in range(24):
-        p20m.aspirate(10, competent_cells_300ul)
-        p20m.dispense(10, competent_cell_plate.wells()[i])
-    p20m.drop_tip()
+        p20s.aspirate(10, competent_cells_300ul)
+        p20s.dispense(10, competent_cell_plate.wells()[i])
+    p20s.drop_tip()
 
     # Prepare DNA. NEB ships pUC19 with 1ug per ul. We're going for 256pg on the low end, doubling 8 times until 32768pg
     # We are assuming here we go from a stock solution of pUC19 of 100ng, or 100,000pg
@@ -61,36 +58,33 @@ def transform_test():
 
     # Fill the first tube with initial_water_to_add and the rest of the tubes with 10ul
     # We are filling the last column of the competent cell plate
-    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
-    tips_used+=1
-    p20m.aspirate(3, water)
-    p20m.aspirate(initial_water_to_add, water)
-    p20m.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
+    p20s.pick_up_tip()
+    p20s.aspirate(3, water)
+    p20s.aspirate(initial_water_to_add, water)
+    p20s.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
     for i in range(1,8):
-        p20m.aspirate(10, water)
-        p20m.dispense(10, competent_cell_plate.wells()[88+i])
-    p20m.drop_tip()
+        p20s.aspirate(10, water)
+        p20s.dispense(10, competent_cell_plate.wells()[88+i])
+    p20s.drop_tip()
 
     # Move pUC19 to initial tube, mix, drop tip
-    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
-    tips_used+=1
-    p20m.aspirate(initial_stock_to_add, pUC19)
-    p20m.dispense(initial_stock_to_add, competent_cell_plate.wells()[88])
-    p20m.mix(3, 10, competent_cell_plate.wells()[88])
-    p20m.drop_tip()
+    p20s.pick_up_tip()
+    p20s.aspirate(initial_stock_to_add, pUC19)
+    p20s.dispense(initial_stock_to_add, competent_cell_plate.wells()[88])
+    p20s.mix(3, 10, competent_cell_plate.wells()[88])
+    p20s.drop_tip()
 
     # Dilute 1/2
-    p20m.pick_up_tip(tip_rack_single[tip_wells[tips_used]])
-    tips_used+=1
+    p20s.pick_up_tip()
     for i in range(1,8):
-        p20m.aspirate(10, competent_cell_plate.wells()[88+i-1])
-        p20m.dispense(10, competent_cell_plate.wells()[88+i])
-        p20m.mix(3, 10, competent_cell_plate.wells()[88+i])
-    p20m.drop_tip()
+        p20s.aspirate(10, competent_cell_plate.wells()[88+i-1])
+        p20s.dispense(10, competent_cell_plate.wells()[88+i])
+        p20s.mix(3, 10, competent_cell_plate.wells()[88+i])
+    p20s.drop_tip()
 
     # Add to competent cells
     for i in range(0,3):
-        p20m.pick_up_tip(tip_rack_single.wells()[i*8])
+        p20m.pick_up_tip(tip_rack_single.wells()[88-(i*8)])
         p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(3,3), new_tip='never')
         p20m.drop_tip()
 
@@ -120,6 +114,7 @@ def transform_test():
             p20m.move_to(agar_plate.rows()[0][current_lane].bottom())
             p20m.move_to(agar_plate.rows()[0][current_lane].top())
             p20m.drop_tip()
+    ctx.home()
 
     # Deactivate temperature module
     temperature_module.deactivate()
