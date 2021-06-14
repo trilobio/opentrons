@@ -10,6 +10,7 @@ def run(ctx):
     temperature_module = ctx.load_module("temperature module", "7")
     temp_plate = temperature_module.load_labware("nest_96_wellplate_100ul_pcr_full_skirt")
 
+<<<<<<< HEAD
     p20m = ctx.load_instrument("p20_multi_gen2", "left", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_20ul","8")])
     p300m = ctx.load_instrument("p300_multi_gen2", "right", tip_racks=[ctx.load_labware("opentrons_96_filtertiprack_200ul","9")])
 
