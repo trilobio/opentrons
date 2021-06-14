@@ -149,7 +149,7 @@ def transform_test(version = otf.ot_flags.protocol_version_flag, protocol = otf.
     p20s.drop_tip()
 
     # Add to competent cells
-    for i in range(0,3):
+    for i in range(0,2):
         p20m.pick_up_tip(tip_rack_single.wells()[88-(i*8)])
         p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(3,3), new_tip='never')
         p20m.drop_tip()
@@ -167,7 +167,7 @@ def transform_test(version = otf.ot_flags.protocol_version_flag, protocol = otf.
 
     # Start plating
     for i in range(0,3):
-        for j in range(0,4):
+        for j in range(0,3):
             p20m.pick_up_tip()
             if i != 0:
                 p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(2,5), new_tip='never')
