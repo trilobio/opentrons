@@ -97,7 +97,6 @@ def transform_test():
     # Wait 15 minutes (in NEB they ask for 30 minutes, but that is pretty long)
     ctx.delay(900)
 
-    print("asdf")
     # heat shock
     temperature_module.set_temperature(42)
     ctx.delay(10) # The ramp up and down will probably take a bit, so we're doing a short time here. Can be optimized later
