@@ -14,6 +14,7 @@ def run(ctx):
 
     tip_rack = ctx.load_labware("opentrons_96_filtertiprack_20ul","9")
 
+    # TODO: doesn't actually ask for multichannel tip rack calibration or multichannel plate calibrations 
     p20s = ctx.load_instrument("p20_single_gen2", "left", tip_racks=[tip_rack])
     p20m = ctx.load_instrument("p20_multi_gen2", "right", tip_racks=[tip_rack])
 
