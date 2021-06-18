@@ -85,12 +85,12 @@ def run(protocol):
     for i in range(0,3):
         for j in range(0,3):
             p20m.pick_up_tip()
-            if i != 0:
+            if j != 0: # First plating of each column does not need dilution
                 p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(2,5), new_tip='never')
             p20m.aspirate(7.5, competent_cell_plate.rows()[0][i])
 
             # Plate
-            current_lane = (i*4)+j
+            current_lane = (i*3)+j
             p20m.move_to(agar_plate.rows()[0][current_lane].top(4))
             p20m.dispense(6.5)
             p20m.move_to(agar_plate.rows()[0][current_lane].bottom())
@@ -99,4 +99,3 @@ def run(protocol):
 
     # Deactivate temperature module
     temperature_module.deactivate()
-    
