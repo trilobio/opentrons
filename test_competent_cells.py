@@ -13,10 +13,9 @@ def run(protocol):
     water = tube_rack.wells_by_name()["B1"]
     pUC19 = tube_rack.wells_by_name()["C1"]
 
-    tip_rack_single = protocol.load_labware("opentrons_96_filtertiprack_20ul", "6")
-    tip_rack = protocol.load_labware("opentrons_96_filtertiprack_20ul", "9")
+    tip_rack = protocol.load_labware("opentrons_96_filtertiprack_20ul", "6")
 
-    p20s = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[tip_rack_single])
+    p20s = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[tip_rack])
     p20m = protocol.load_instrument("p20_multi_gen2", "right", tip_racks=[tip_rack])
 
     # Lower temperature of temperature module
@@ -66,7 +65,7 @@ def run(protocol):
 
     # Add to competent cells
     for i in range(0,2):
-        p20m.pick_up_tip(tip_rack_single.wells()[88-(i*8)])
+        p20m.pick_up_tip()
         p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(3,3), new_tip='never')
         p20m.drop_tip()
 
