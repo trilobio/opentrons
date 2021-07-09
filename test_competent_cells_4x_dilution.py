@@ -1,22 +1,21 @@
 """
-Original, does not have improved mixing.
-Does serial dilutions at a factor of 1/2.
+We do x1/4 serial dilution of Puc19.
 
 Concentrations of pUC19 (pg/uL) by this protocol:
 32768
-16384
 8192
-4096
 2048
-1024
 512
-256
+128
+32
+8
+2
 """
 metadata = {"apiLevel": "2.0"} # tentative?
 
 
 def run(protocol):
-	# Setup labwares
+    # Setup labwares
     lb = protocol.load_labware("nest_1_reservoir_195ml", 1).wells_by_name()["A1"]
     agar_plate = protocol.load_labware("biorad_96_wellplate_200ul_pcr", 2)
     temperature_module = protocol.load_module("temperature module", 4)
@@ -44,7 +43,7 @@ def run(protocol):
         p20s.dispense(10, competent_cell_plate.wells()[i])
     p20s.drop_tip()
 
-    # Prepare DNA. NEB ships pUC19 with 1ug per ul. We're going for 256pg on the low end, doubling 8 times until 32768pg
+    # Prepare DNA. NEB ships pUC19 with 1ug per ul. Start with 32768pg and dilute from there
     # We are assuming here we go from a stock solution of pUC19 of 100ng, or 100,000pg
     pUC19_stock = 100000
     dilution = pUC19_stock/32768
@@ -58,8 +57,8 @@ def run(protocol):
     p20s.aspirate(initial_water_to_add, water)
     p20s.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
     for i in range(1,8):
-        p20s.aspirate(10, water)
-        p20s.dispense(10, competent_cell_plate.wells()[88+i])
+        p20s.aspirate(30, water)
+        p20s.dispense(30, competent_cell_plate.wells()[88+i])
     p20s.drop_tip()
 
     # Move pUC19 to initial tube, mix, drop tip
@@ -69,7 +68,7 @@ def run(protocol):
     p20s.mix(3, 10, competent_cell_plate.wells()[88])
     p20s.drop_tip()
 
-    # Dilute 1/2
+    # Serially dilute 1/4
     p20s.pick_up_tip()
     for i in range(1,8):
         p20s.aspirate(10, competent_cell_plate.wells()[88+i-1])
@@ -98,8 +97,9 @@ def run(protocol):
     for i in range(0,3):
         for j in range(0,3):
             p20m.pick_up_tip()
-            if j != 0: # First plating of each column does not need dilution
-                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(2,5), new_tip='never')
+            if j > 0: # First plating of each column does not need dilution
+                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], new_tip='never')
+            p20m.mix(2, 5, competent_cell_plate.rows()[0][i])
             p20m.aspirate(7.5, competent_cell_plate.rows()[0][i])
 
             # Plate
