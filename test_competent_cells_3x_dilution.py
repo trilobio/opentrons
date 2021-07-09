@@ -68,18 +68,18 @@ def run(protocol):
     p20s.mix(3, 10, competent_cell_plate.wells()[88])
     p20s.drop_tip()
 
-    # Dilute 1/2
+    # Serially dilute 1/3
     p20s.pick_up_tip()
     for i in range(1,8):
         p20s.aspirate(10, competent_cell_plate.wells()[88+i-1])
         p20s.dispense(10, competent_cell_plate.wells()[88+i])
-        p20s.mix(5, 10, competent_cell_plate.wells()[88+i])
+        p20s.mix(3, 10, competent_cell_plate.wells()[88+i])
     p20s.drop_tip()
 
     # Add to competent cells
     for i in range(0,2):
         p20m.pick_up_tip()
-        p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(10,3), new_tip='never')
+        p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(3,3), new_tip='never')
         p20m.drop_tip()
 
     # Wait 15 minutes (in NEB they ask for 30 minutes, but that is pretty long)
@@ -97,8 +97,9 @@ def run(protocol):
     for i in range(0,3):
         for j in range(0,3):
             p20m.pick_up_tip()
-            if j != 0: # First plating of each column does not need dilution
-                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(10,5), new_tip='never')
+            if j > 0: # First plating of each column does not need dilution
+                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], new_tip='never')
+            p20m.mix(2, 5, competent_cell_plate.rows()[0][i])
             p20m.aspirate(7.5, competent_cell_plate.rows()[0][i])
 
             # Plate
