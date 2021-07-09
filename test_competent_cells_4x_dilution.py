@@ -1,12 +1,11 @@
 """
 Same as test_competent_cells, but instead of 2x dilution, we do 4x dilution of Puc19.
 """
-
 metadata = {"apiLevel": "2.0"} # tentative?
 
 
 def run(protocol):
-	# Setup labwares
+    # Setup labwares
     lb = protocol.load_labware("nest_1_reservoir_195ml", 1).wells_by_name()["A1"]
     agar_plate = protocol.load_labware("biorad_96_wellplate_200ul_pcr", 2)
     temperature_module = protocol.load_module("temperature module", 4)
@@ -39,10 +38,6 @@ def run(protocol):
     pUC19_stock = 100000
     dilution = pUC19_stock/32768
     initial_stock_to_add = 20/dilution # 20ul as the end quantity of how much we want per tube
-
-    # lazy math: undo the 2x dilution and apply the 4x dilution
-    initial_stock_to_add *= 2/4
-
     initial_water_to_add = 20 - initial_stock_to_add
 
     # Fill the first tube with initial_water_to_add and the rest of the tubes with 10ul
