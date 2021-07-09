@@ -1,5 +1,15 @@
 """
-Same as test_competent_cells, but instead of 2x dilution, we do 3x dilution of Puc19.
+We do x1/3 serial dilution of Puc19.
+
+Concentrations of pUC19 (pg/uL) by this protocol:
+32768
+10923
+3641
+1214
+405
+135
+45
+15
 """
 metadata = {"apiLevel": "2.0"} # tentative?
 
@@ -33,7 +43,7 @@ def run(protocol):
         p20s.dispense(10, competent_cell_plate.wells()[i])
     p20s.drop_tip()
 
-    # Prepare DNA. NEB ships pUC19 with 1ug per ul. We're going for 256pg on the low end, doubling 8 times until 32768pg
+    # Prepare DNA. NEB ships pUC19 with 1ug per ul. Start with 32768pg and dilute from there
     # We are assuming here we go from a stock solution of pUC19 of 100ng, or 100,000pg
     pUC19_stock = 100000
     dilution = pUC19_stock/32768
@@ -47,8 +57,8 @@ def run(protocol):
     p20s.aspirate(initial_water_to_add, water)
     p20s.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
     for i in range(1,8):
-        p20s.aspirate(10, water)
-        p20s.dispense(10, competent_cell_plate.wells()[88+i])
+        p20s.aspirate(20, water)
+        p20s.dispense(20, competent_cell_plate.wells()[88+i])
     p20s.drop_tip()
 
     # Move pUC19 to initial tube, mix, drop tip
@@ -63,13 +73,13 @@ def run(protocol):
     for i in range(1,8):
         p20s.aspirate(10, competent_cell_plate.wells()[88+i-1])
         p20s.dispense(10, competent_cell_plate.wells()[88+i])
-        p20s.mix(3, 10, competent_cell_plate.wells()[88+i])
+        p20s.mix(5, 10, competent_cell_plate.wells()[88+i])
     p20s.drop_tip()
 
     # Add to competent cells
     for i in range(0,2):
         p20m.pick_up_tip()
-        p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(3,3), new_tip='never')
+        p20m.transfer(1, competent_cell_plate.wells()[88], competent_cell_plate.wells()[i*8], mix_after=(10,3), new_tip='never')
         p20m.drop_tip()
 
     # Wait 15 minutes (in NEB they ask for 30 minutes, but that is pretty long)
@@ -88,7 +98,7 @@ def run(protocol):
         for j in range(0,3):
             p20m.pick_up_tip()
             if j != 0: # First plating of each column does not need dilution
-                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(2,5), new_tip='never')
+                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(10,5), new_tip='never')
             p20m.aspirate(7.5, competent_cell_plate.rows()[0][i])
 
             # Plate

@@ -1,3 +1,17 @@
+"""
+Original, does not have improved mixing.
+Does serial dilutions at a factor of 1/2.
+
+Concentrations of pUC19 (pg/uL) by this protocol:
+32768
+16384
+8192
+4096
+2048
+1024
+512
+256
+"""
 metadata = {"apiLevel": "2.0"} # tentative?
 
 
