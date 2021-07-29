@@ -57,8 +57,10 @@ def run(protocol):
     p20s.aspirate(initial_water_to_add, water)
     p20s.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
     for i in range(1,8):
-        p20s.aspirate(20, water)
-        p20s.dispense(20, competent_cell_plate.wells()[88+i])
+        # Transfer 20uL water using a p20 pipette, which doesn't allow transfer of 20uL at once
+        for i in range(2):
+            p20s.aspirate(10, water)
+            p20s.dispense(10, competent_cell_plate.wells()[88+i])
     p20s.drop_tip()
 
     # Move pUC19 to initial tube, mix, drop tip
