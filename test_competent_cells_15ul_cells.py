@@ -40,8 +40,8 @@ def run(protocol):
     p20s.pick_up_tip()
     p20s.aspirate(5, competent_cells_300ul)
     for i in range(24):
-        p20s.aspirate(10, competent_cells_300ul)
-        p20s.dispense(10, competent_cell_plate.wells()[i])
+        p20s.aspirate(15, competent_cells_300ul)
+        p20s.dispense(15, competent_cell_plate.wells()[i])
     p20s.drop_tip()
 
     # Prepare DNA. NEB ships pUC19 with 1ug per ul. We're going for 256pg on the low end, doubling 8 times until 32768pg
