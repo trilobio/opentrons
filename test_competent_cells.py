@@ -98,8 +98,9 @@ def run(protocol):
     for i in range(0,3):
         for j in range(0,3):
             p20m.pick_up_tip()
-            if j != 0: # First plating of each column does not need dilution
-                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], mix_after=(2,5), new_tip='never')
+            if j > 0: # First plating of each column does not need dilution
+                p20m.transfer(7.5, lb, competent_cell_plate.rows()[0][i], new_tip='never')
+            p20m.mix(2, 5, competent_cell_plate.rows()[0][i])
             p20m.aspirate(7.5, competent_cell_plate.rows()[0][i])
 
             # Plate

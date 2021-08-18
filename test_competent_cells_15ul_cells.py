@@ -1,21 +1,22 @@
 """
-We do x1/3 serial dilution of Puc19.
+Original, does not have improved mixing.
+Does serial dilutions at a factor of 1/2.
 
 Concentrations of pUC19 (pg/uL) by this protocol:
 32768
-10923
-3641
-1214
-405
-135
-45
-15
+16384
+8192
+4096
+2048
+1024
+512
+256
 """
 metadata = {"apiLevel": "2.0"} # tentative?
 
 
 def run(protocol):
-    # Setup labwares
+	# Setup labwares
     lb = protocol.load_labware("nest_1_reservoir_195ml", 1).wells_by_name()["A1"]
     agar_plate = protocol.load_labware("biorad_96_wellplate_200ul_pcr", 2)
     temperature_module = protocol.load_module("temperature module", 4)
@@ -39,11 +40,11 @@ def run(protocol):
     p20s.pick_up_tip()
     p20s.aspirate(5, competent_cells_300ul)
     for i in range(24):
-        p20s.aspirate(10, competent_cells_300ul)
-        p20s.dispense(10, competent_cell_plate.wells()[i])
+        p20s.aspirate(15, competent_cells_300ul)
+        p20s.dispense(15, competent_cell_plate.wells()[i])
     p20s.drop_tip()
 
-    # Prepare DNA. NEB ships pUC19 with 1ug per ul. Start with 32768pg and dilute from there
+    # Prepare DNA. NEB ships pUC19 with 1ug per ul. We're going for 256pg on the low end, doubling 8 times until 32768pg
     # We are assuming here we go from a stock solution of pUC19 of 100ng, or 100,000pg
     pUC19_stock = 100000
     dilution = pUC19_stock/32768
@@ -57,10 +58,8 @@ def run(protocol):
     p20s.aspirate(initial_water_to_add, water)
     p20s.dispense(initial_water_to_add, competent_cell_plate.wells()[88])
     for i in range(1,8):
-        # Transfer 20uL water using a p20 pipette, which doesn't allow transfer of 20uL at once
-        for i in range(2):
-            p20s.aspirate(10, water)
-            p20s.dispense(10, competent_cell_plate.wells()[88+i])
+        p20s.aspirate(10, water)
+        p20s.dispense(10, competent_cell_plate.wells()[88+i])
     p20s.drop_tip()
 
     # Move pUC19 to initial tube, mix, drop tip
@@ -70,7 +69,7 @@ def run(protocol):
     p20s.mix(3, 10, competent_cell_plate.wells()[88])
     p20s.drop_tip()
 
-    # Serially dilute 1/3
+    # Dilute 1/2
     p20s.pick_up_tip()
     for i in range(1,8):
         p20s.aspirate(10, competent_cell_plate.wells()[88+i-1])
