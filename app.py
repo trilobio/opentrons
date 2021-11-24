@@ -7,6 +7,63 @@ import opentronsfastapi as otf
 app = FastAPI()
 app.include_router(otf.default_routes)
 
+## =============== ##
+## Resuspend Plate ##
+## =============== ##
+
+class StockWell(BaseModel):
+    address: str
+    volume: float
+
+class StockPlate(BaseModel):
+    type: str
+    wells: List[StockWell]
+
+@app.post("/api/resuspend_plate")
+@otf.opentrons_execute()
+def resuspend_plate(stock_plate: StockPlate, version = otf.ot_flags.protocol_version_flag, protocol = otf.ot_flags.protocol_context):
+    
+    plate_labware = protocol.load_labware(stock_plate.type, "3")
+    water = protocol.load_labware("nest_1_reservoir_195ml", "5")
+    p20_single = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[protocol.load_labware("opentrons_96_filtertiprack_20ul", "11")])
+    p300_single = protocol.load_instrument("p300_single_gen2", "right", tip_racks =[protocol.load_labware("opentrons_96_tiprack_300ul", "7")])
+
+    protocol.home()
+    for well in stock_plate.wells:
+        if well.volume > 20:
+            p300_single.transfer(well.volume, water, plate_labware.wells(well.address), mix_after=(6, well.volume/2.0))
+        else:
+            p20_single.transfer(well.volume, water, plate_labware.wells(well.address), mix_after=(6, well.volume/2.0))
+
+## ============= ##
+## Aliquot Plate ##
+## ============= ##
+# DOES NOT WORK YET
+@app.post("/api/aliquot_plate")
+@otf.opentrons_execute()
+def aliquot_plate(stock_plate: StockPlate, version = otf.ot_flags.protocol_version_flag, protocol = otf.ot_flags.protocol_context):
+    
+    source_plate_labware = protocol.load_labware(stock_plate.type, "3")
+    dest_plate_labware = protocol.load_labware("biorad_96_wellplate_200ul_pcr", "4")
+    p20_multi = protocol.load_instrument("p20_multi_gen2", "left", tip_racks=[protocol.load_labware("opentrons_96_filtertiprack_20ul", "11")])
+    p300_multi = protocol.load_instrument('p300_multi_gen2', "right", tip_racks =[protocol.load_labware("opentrons_96_tiprack_300ul", "7")])
+
+
+    for well in stock_plate.wells:
+        if well.volume > 20:
+            p300_multi.transfer(well.volume, water, plate_labware.wells(well.address), mix_after=(6, well.volume/2.0))
+        else:
+            p20_multi.transfer(well.volume, water, plate_labware.wells(well.address), mix_after=(6, well.volume/2.0))
+
+## =================== ##
+## Conduct Phusion PCR ##
+## =================== ##
+
+## =========== ##
+## PCR Cleanup ##
+## =========== ##
+
+
 ## ===== ##
 ## Build ##
 ## ===== ##
@@ -34,6 +91,7 @@ class AssemblyDirections(BaseModel):
     assemblyPlates: List[AssemblyPlate]
     assemblyTransfers: List[AssemblyTransfer]
     maxVol: float
+
 
 @app.post("/api/build")
 @otf.opentrons_execute()
