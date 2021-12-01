@@ -32,6 +32,10 @@ def run(protocol):
     p20s = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[protocol.load_labware("opentrons_96_filtertiprack_20ul", 3)])
     p300s = protocol.load_instrument("p300_single_gen2", "right", tip_racks=[protocol.load_labware("opentrons_96_tiprack_300ul", 5)])
 
+    # Lower speed of aspiration to prevent disturbing the beads during bead washing
+    p300s.flow_rate.aspirate = 25
+    p300s.flow_rate.dispense = 150
+
     ### End prep and adapter
     end_prep_well = mag.wells_by_name()["A1"]
     adapter_well = mag.wells_by_name()["B1"]
@@ -53,9 +57,9 @@ def run(protocol):
     p300s.transfer(200, end_prep_well, trash)
     for _ in range(0,2):
         p300s.pick_up_tip()
-        p300s.aspirate(200, ethanol)
-        p300s.dispense(200, end_prep_well)
-        p300s.aspirate(200, end_prep_well)
+        p300s.aspirate(180, ethanol, air_gap=20)
+        p300s.dispense(180, end_prep_well)
+        p300s.transfer(200, end_prep_well, trash)
         p300s.drop_tip()
     protocol.delay(90) # Since we can't pipette off residue, just assume 90s is enough to dry
     magnetic_module.disengage()
@@ -95,5 +99,3 @@ def run(protocol):
     magnetic_module.engage()
     protocol.delay(300)
     p20s.transfer(15, adapter_well, output_tube)
-
-
