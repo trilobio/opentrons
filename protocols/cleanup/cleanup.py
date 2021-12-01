@@ -1,11 +1,12 @@
-metadata = {"apiLevel": "2.0"} # tentative?
-
+metadata = {"apiLevel": "2.0"}
 
 bead_ratio = 1.8
 sample_volume = 45
 elution_volume = 20
 sample_cols = 4
 
+# Docs:
+# https://s3.amazonaws.com/opentrons-protocol-library-website/Technical+Notes/Nucleic+Acid+Purification+with+Magnetic+Module+OT2+Technical+Note.pdf
 def run(protocol):
     # Make sure you are using the right pipette tips
     p300m = protocol.load_instrument("p300_multi_gen2", "right", tip_racks=[protocol.load_labware("opentrons_96_tiprack_300ul", i) for i in [5,6]])
@@ -39,9 +40,9 @@ def run(protocol):
     # Discard supernatant and wash
     p300m.transfer(total_volume, mag.columns()[:sample_cols], waste, blow_out=True)
     for _ in range(0,2):
-        p300m.transfer(200, ethanol, mag.columns()[:sample_cols])
+        p300m.transfer(180, ethanol, mag.columns()[:sample_cols], air_gap=20)
         protocol.delay(60)
-        p300m.transfer(200, mag.columns()[:sample_cols], waste)
+        p300m.transfer(180, mag.columns()[:sample_cols], waste, air_gap=20)
 
     # Dry for 5min and disengage
     protocol.delay(300)
