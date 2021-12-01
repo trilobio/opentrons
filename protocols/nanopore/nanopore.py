@@ -56,11 +56,9 @@ def run(protocol):
     protocol.delay(420) # opentrons docs require at least 7 min when >50ul
     p300s.transfer(200, end_prep_well, trash)
     for _ in range(0,2):
-        p300s.pick_up_tip()
-        p300s.aspirate(180, ethanol, air_gap=20)
-        p300s.dispense(180, end_prep_well)
+        p300s.transfer(180, ethanol, end_prep_well, air_gap=20)
+        protocol.delay(30)
         p300s.transfer(200, end_prep_well, trash)
-        p300s.drop_tip()
     protocol.delay(90) # Since we can't pipette off residue, just assume 90s is enough to dry
     magnetic_module.disengage()
     p300s.transfer(61, water, end_prep_well, mix_after=(5,30))
