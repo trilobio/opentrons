@@ -1,5 +1,5 @@
-metadata = {"apiLevel": "2.0"} # tentative?
-
+metadata = {"apiLevel": "2.0"}
+çç
 def run(protocol):
     # Please input 100-200fmol for R9 and 150-300fmol for R10
     # Init protocol with 47ul of DNA in A1 of the magdeck
