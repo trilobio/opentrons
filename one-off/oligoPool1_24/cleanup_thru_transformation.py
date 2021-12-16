@@ -23,8 +23,9 @@ def run(protocol):
     lb = tube_rack.wells_by_name()["D1"]
     cleanup_and_assembly_control = tube_rack.wells_by_name()["A2"]
     goldengate_mm = tube_rack.wells_by_name()["B2"]
-    transformation_control = tube_rack.wells_by_name()["C2"]
-    competent_cells = tube_rack.wells_by_name()["D2"]
+    vector = tube_rack.wells_by_name()["C2"]
+    transformation_control = tube_rack.wells_by_name()["D2"]
+    competent_cells = tube_rack.wells_by_name()["A3"]
 
     reagents = protocol.load_labware("nest_12_reservoir_15ml", 8)
     ethanol = reagents.wells_by_name()["A12"]
@@ -55,7 +56,7 @@ def run(protocol):
     for _ in range(0,2):
         p300s.transfer(180, ethanol, mag.wells()[:22], air_gap=20, new_tip='always')
         # normally protocol.delay(60) but this transfer should take long enough to just continue from beginning
-        p300s.transfer(180, mag.wells()[:22], air_gap=20, waste, new_tip='always')
+        p300s.transfer(180, mag.wells()[:22], waste, air_gap=20, new_tip='always')
 
     # Dry for 5 minutes and then disengage
     protocol.delay(300)
@@ -90,7 +91,7 @@ def run(protocol):
     # Pause for adding competent cells
     protocol.pause("Remove GoldenGate, incubate at 37 for 1hr, add plate back onto temperature module")
     p20s.transfer(15, competent_cells, tmp.wells()[72:], new_tip='always')
-    p20s.transfer(1, wells[48:71], tmp.wells()[72:95], new_tip='always')
+    p20s.transfer(1, tmp.wells()[48:71], tmp.wells()[72:95], new_tip='always')
     p20s.transfer(1, transformation_control, tmp.wells()[95], new_tip='always')
 
     # Wait 15 minutes (NEB asks for 30min, but that is fairly long)
