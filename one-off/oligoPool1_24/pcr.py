@@ -43,13 +43,11 @@ def run(protocol):
     op = tube_rack.wells_by_name()["B1"]
 
     p300s.transfer(47, mm, pcr.wells()[:20])
-    i = 0
-    for row in csv.split("\n")[:20]:
+    p300s.transfer(22, op, mm, mix_after=(8, 200), new_tip="always")
+    for i, row in enumerate(csv.split("\n")[:20]):
         row_split = row.split("\t")
-        p20s.transfer(1, op, pcr.wells()[i], new_tip="always")
         p20s.transfer(1, primer_plate.wells_by_name()[row_split[0]], pcr.wells()[i], new_tip="always")
         p20s.transfer(1, primer_plate.wells_by_name()[row_split[1]], pcr.wells()[i], new_tip="always")
-        i += 1
 
 # name: 42 in: main
 # 1. 95c 30s
