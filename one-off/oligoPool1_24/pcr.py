@@ -50,3 +50,12 @@ def run(protocol):
         p20s.transfer(1, primer_plate.wells_by_name()[row_split[0]], pcr.wells()[i], new_tip="always")
         p20s.transfer(1, primer_plate.wells_by_name()[row_split[1]], pcr.wells()[i], new_tip="always")
         i += 1
+
+# name: 42 in: main
+# 1. 95c 30s
+# 2. 95c 15s
+# 3. 50c 15s
+# 4. 68c 20s
+# 5. GOTO 2 30
+# 6. 68c 600s
+# 7. 4c 3600s
