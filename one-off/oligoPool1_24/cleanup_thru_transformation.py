@@ -14,7 +14,6 @@ def run(protocol):
     mag = magnetic_module.load_labware("nest_96_wellplate_100ul_pcr_full_skirt")
     tmp = temperature_module.load_labware("nest_96_wellplate_100ul_pcr_full_skirt")
     magnetic_module.disengage()
-    temperature_module.set_temperature(8)
 
     tube_rack = protocol.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", 11)
     snapshot_post_cleanup = tube_rack.wells_by_name()["A1"]
@@ -59,7 +58,6 @@ def run(protocol):
         p300s.transfer(180, mag.wells()[:22], waste, air_gap=20, new_tip='always')
 
     # Dry for 5 minutes and then disengage
-    protocol.delay(300)
     magnetic_module.disengage()
 
     # Add elution buffer, mix, output
@@ -70,6 +68,7 @@ def run(protocol):
     p20s.transfer(20, mag.wells()[:22], mag.wells()[24:46], blow_out=True, new_tip='always')
 
     # snapshot
+    p300s.flow_rate.aspirate = 92.86
     p20s.transfer(10, water, snapshot_post_cleanup, new_tip='always')
     p20s.transfer(3, mag.wells()[:22], snapshot_post_cleanup, new_tip='always')
 
@@ -89,6 +88,7 @@ def run(protocol):
     ### ========================== ###
 
     # Pause for adding competent cells
+    temperature_module.set_temperature(8)
     protocol.pause("Remove GoldenGate, incubate at 37 for 1hr, add plate back onto temperature module")
     p20s.transfer(15, competent_cells, tmp.wells()[72:], new_tip='always')
     p20s.transfer(1, tmp.wells()[48:71], tmp.wells()[72:95], new_tip='always')

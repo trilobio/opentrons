@@ -56,7 +56,6 @@ def run(protocol):
     ctrl = tube_rack.wells_by_name()["C1"]
 
     p300s.transfer(47, mm, pcr.wells()[:20])
-    p300s.transfer(22, op, mm, mix_after=(8, 200), new_tip="always")
     # 4 from the basic fragments
     for i, row in enumerate(csv.split("\n")[:4]):
         row_split = row.split("\t")
