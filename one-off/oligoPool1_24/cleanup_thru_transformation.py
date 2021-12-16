@@ -28,8 +28,8 @@ def run(protocol):
     competent_cells = tube_rack.wells_by_name()["A3"]
 
     reagents = protocol.load_labware("nest_12_reservoir_15ml", 8)
-    ethanol = reagents.wells_by_name()["A12"]
-    waste = reagents.wells_by_name()["A11"]
+    ethanol = reagents.wells_by_name()["A3"]
+    waste = reagents.wells_by_name()["A1"]
 
     agar_plate = protocol.load_labware("biorad_96_wellplate_200ul_pcr", 4)
 
