@@ -41,7 +41,7 @@ def run(protocol):
     # assembly control 22
     # transformation control 23
     p20s.transfer(9, cleanup_and_assembly_control, mag.wells()[21], new_tip='always') # 3x assembly control
-    p20s.transfer(41, , mag.wells()[21], new_tip='always')
+    p300s.transfer(41, water, mag.wells()[21], new_tip='always')
     p300s.transfer(bead_volume, mag_beads, mag.wells()[:22], mix_before=(5, 200), mix_after=(10, bead_volume/2), new_tip='always')
     protocol.delay(300)
     magnetic_module.engage()
