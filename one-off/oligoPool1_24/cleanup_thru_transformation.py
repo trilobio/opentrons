@@ -17,9 +17,7 @@ def run(protocol):
 
     tube_rack = protocol.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", 11)
     snapshot_post_cleanup = tube_rack.wells_by_name()["A1"]
-    mag_beads = tube_rack.wells_by_name()["B1"]
     water = tube_rack.wells_by_name()["C1"]
-    lb = tube_rack.wells_by_name()["D1"]
     cleanup_and_assembly_control = tube_rack.wells_by_name()["A2"]
     goldengate_mm = tube_rack.wells_by_name()["B2"]
     vector = tube_rack.wells_by_name()["C2"]
@@ -28,6 +26,7 @@ def run(protocol):
 
     reagents = protocol.load_labware("nest_12_reservoir_15ml", 8)
     ethanol = reagents.wells_by_name()["A3"]
+    mag_beads = reagents.wells_by_name()["A2"]
     waste = reagents.wells_by_name()["A1"]
 
     agar_plate = protocol.load_labware("biorad_96_wellplate_200ul_pcr", 4)
@@ -42,6 +41,7 @@ def run(protocol):
     # assembly control 22
     # transformation control 23
     p20s.transfer(9, cleanup_and_assembly_control, mag.wells()[21], new_tip='always') # 3x assembly control
+    p20s.transfer(41, , mag.wells()[21], new_tip='always')
     p300s.transfer(bead_volume, mag_beads, mag.wells()[:22], mix_before=(5, 200), mix_after=(10, bead_volume/2), new_tip='always')
     protocol.delay(300)
     magnetic_module.engage()
@@ -61,16 +61,16 @@ def run(protocol):
     magnetic_module.disengage()
 
     # Add elution buffer, mix, output
-    p20s.transfer(20, water, mag.wells()[:22], mix_after=(10, 10), new_tip='always')
+    p20s.transfer(40, water, mag.wells()[:22], mix_after=(10, 10), new_tip='always')
     protocol.delay(300)
     magnetic_module.engage()
     protocol.delay(120)
-    p20s.transfer(20, mag.wells()[:22], mag.wells()[24:46], blow_out=True, new_tip='always')
+    p20s.transfer(40, mag.wells()[:22], mag.wells()[24:46], blow_out=True, new_tip='always')
 
     # snapshot
     p300s.flow_rate.aspirate = 92.86
     p20s.transfer(10, water, snapshot_post_cleanup, new_tip='always')
-    p20s.transfer(3, mag.wells()[:22], snapshot_post_cleanup, new_tip='always')
+    p20s.transfer(3, mag.wells()[24:46], snapshot_post_cleanup, new_tip='always')
 
     ### ========== ###
     ### GoldenGate ###
@@ -78,7 +78,7 @@ def run(protocol):
     
     # Pause for adding GoldenGate mastermix, excluding the transformation control
     protocol.pause("Add GoldenGate mastermix")
-    p20s.transfer(16, goldengate_mm, mag.wells()[48:71], new_tip='always')
+    p20s.transfer(16, goldengate_mm, mag.wells()[48:71])
     p20s.transfer(1, vector, mag.wells()[48:71], new_tip='always')
     p20s.transfer(3, mag.wells()[24:46], mag.wells()[48:70], new_tip='always')
     p20s.transfer(3, cleanup_and_assembly_control, mag.wells()[70], new_tip='always')
@@ -88,9 +88,9 @@ def run(protocol):
     ### ========================== ###
 
     # Pause for adding competent cells
-    temperature_module.set_temperature(8)
     protocol.pause("Remove GoldenGate, incubate at 37 for 1hr, add plate back onto temperature module")
-    p20s.transfer(15, competent_cells, tmp.wells()[72:], new_tip='always')
+    temperature_module.set_temperature(8)
+    p20s.transfer(15, competent_cells, tmp.wells()[72:])
     p20s.transfer(1, tmp.wells()[48:71], tmp.wells()[72:95], new_tip='always')
     p20s.transfer(1, transformation_control, tmp.wells()[95], new_tip='always')
 
@@ -114,7 +114,7 @@ def run(protocol):
         for dilution_num in range(0,4):
             p20s.pick_up_tip()
             if dilution_num > 0: # Do dolution
-                p20s.transfer(7.5, lb, well, new_tip='never')
+                p20s.transfer(7.5, water, well, new_tip='never')
             p20s.mix(2, 5, well)
             p20s.aspirate(7.5, well)
 
@@ -128,3 +128,4 @@ def run(protocol):
 
     # Deactivate temperature module
     temperature_module.deactivate()
+    magnetic_module.disengage()
