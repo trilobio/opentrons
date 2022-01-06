@@ -42,5 +42,3 @@ def run(protocol):
             p20s.move_to(t.top())
             p20s.drop_tip()
     temperature_module.deactivate()
-
-
