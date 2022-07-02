@@ -53,6 +53,7 @@ def run(protocol):
         p300s.transfer(300, w, trash)
         magnetic_module.disengage()
     protocol.delay(1200) # dry
+
     p300s.transfer(40, water, w, mix_after=(5,25))
     magnetic_module.engage()
     p300s.transfer(40, w.bottom(1), output)
