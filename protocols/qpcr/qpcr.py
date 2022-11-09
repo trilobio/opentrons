@@ -3,9 +3,9 @@ metadata = {"apiLevel": "2.0"}
 # For running standard qPCRs on the chai machine
 def run(protocol):
     
-    tube_rack = protocol.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", 3)
-    input_plate = protocol.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", 5) # calibrated to cyroking plates
-    output_plate = protocol.load_labware("biorad_96_wellplate_200ul_pcr", 2) # calibrated to strip tubes on aluminum plate
+    tube_rack = protocol.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", 6)
+    input_plate = protocol.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", 8) # calibrated to cyroking plates
+    output_plate = protocol.load_labware("opentrons_96_aluminumblock_generic_pcr_strip_200ul", 5) # calibrated to strip tubes on aluminum plate
 
     mm = tube_rack.wells_by_name()["A1"] # chai qPCR mastermix
     water = tube_rack.wells_by_name()["B1"] # good ole H2O
@@ -14,7 +14,7 @@ def run(protocol):
     m13for = input_plate.wells_by_name()["B1"] # M13for, 10uM
     m13rev = input_plate.wells_by_name()["C1"] # M13rev, 10uM
 
-    p20s = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[protocol.load_labware("opentrons_96_filtertiprack_20ul", 6)])
+    p20s = protocol.load_instrument("p20_single_gen2", "left", tip_racks=[protocol.load_labware("opentrons_96_filtertiprack_20ul", 9)])
 
     # A1: water
     # B1: mastermix + water
