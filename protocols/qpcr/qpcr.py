@@ -4,7 +4,7 @@ metadata = {"apiLevel": "2.0"}
 def run(protocol):
     
     tube_rack = protocol.load_labware("opentrons_24_tuberack_generic_2ml_screwcap", 6)
-    input_plate = protocol.load_labware("nest_96_wellplate_100ul_pcr_full_skirt", 8) # calibrated to cyroking plates
+    input_plate = protocol.load_labware("cryoking_96_wellplate_300ul", 8) # calibrated to cyroking plates
     output_plate = protocol.load_labware("opentrons_96_aluminumblock_generic_pcr_strip_200ul", 5) # calibrated to strip tubes on aluminum plate
 
     mm = tube_rack.wells_by_name()["A1"] # chai qPCR mastermix
